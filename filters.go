@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -166,6 +167,60 @@ func (p *Pipe) ExecForEach(cmdTpl string) *Pipe {
 		}
 		out.WriteString(cmdOutput)
 	})
+}
+
+// ExecReduce runs the supplied "reducer" command on each line of input,
+// passing in the return value from the calculation on the preceding line.
+// The final result of running the reducer across lines is a single value.
+// The command string is interpreted as a Go template, which may include
+// {{.First}} as the previously reduced value and {{.Second}} as the current
+// line value. InitVal specifies the initial "reduced" value, and if it is an
+// empty string, the reduction will start from the first two input lines.
+// If any command resulted in a non-zero exit status, the function will return
+// a pipe with error status "exit status X", where X is the integer exit status,
+// and the pipe's reader contains initVal.
+// The function does NOT jump over empty lines.
+func (p *Pipe) ExecReduce(cmdTpl string, initVal string) *Pipe {
+	type ReduceArgs struct {
+		First  string
+		Second string
+	}
+	if p == nil || p.Error() != nil {
+		return p
+	}
+	tpl, err := template.New("").Parse(cmdTpl)
+	if err != nil {
+		return p.WithError(err)
+	}
+	scanner := bufio.NewScanner(p.Reader)
+	output := initVal
+	for scanner.Scan() {
+		text := scanner.Text()
+		if output == "" {
+			output = text
+			continue
+		}
+		cmdLine := strings.Builder{}
+		err := tpl.Execute(&cmdLine, ReduceArgs{First: output, Second: scanner.Text()})
+		log.Println(cmdLine.String())
+		if err != nil {
+			return Echo(initVal + "\n").WithError(err)
+		}
+		cmdOutput, err := Exec(cmdLine.String()).String()
+		if err != nil {
+			return Echo(initVal + "\n").WithError(err)
+		}
+		if strings.HasSuffix(cmdOutput, "\n") {
+			output = cmdOutput[:len(cmdOutput)-1]
+		} else {
+			output = cmdOutput
+		}
+	}
+	err = scanner.Err()
+	if err != nil {
+		return Echo(initVal + "\n").WithError(err)
+	}
+	return Echo(output + "\n")
 }
 
 // First reads from the pipe, and returns a new pipe containing only the first N
