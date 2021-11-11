@@ -101,6 +101,7 @@ John is also the author of [For the Love of Go](https://bitfieldconsulting.com/b
 	- [EachLine](#eachline)
 	- [Exec](#exec-1)
 	- [ExecForEach](#execforeach)
+	- [ExecReduce](#execreduce)
 	- [First](#first)
 	- [Freq](#freq)
 	- [Join](#join)
@@ -617,6 +618,19 @@ The first command that results in an error will set the pipe's error status acco
 script.ListFiles("*.php").ExecForEach("php {{.}}").Stdout()
 ```
 
+## ExecReduce
+
+ExecReduce runs the supplied "reducer" command on each line of input, passing in the return value from the calculation on the preceding line. The final result of running the reducer across lines is a single value.
+
+The command string is interpreted as a Go template, which may include `{{.First}}` as the previously reduced value and `{{.Second}}` as the current line value. `InitVal` specifies the initial "reduced" value, and if it is an empty string, the reduction will start from the first two input lines. The function does not jump over empty lines.
+
+The first command that results in an error will set the pipe's error status accordingly, and no subsequent commands will be run.
+
+```go
+// Calculate the sum of numbers
+script.Stdin().ExecReduce("bash -c 'echo $(({{.First}} + {{.Second}}))'", "").Stdout()
+```
+
 ## First
 
 `First()` reads its input and passes on the first N lines of it (like Unix [`head`](examples/head/main.go)):
@@ -876,6 +890,7 @@ Since `script` is designed to help you write system administration programs, a f
 * [cat 2](examples/cat2/main.go) (takes a list of files on the command line and concatenates their contents to stdout)
 * [echo](examples/echo/main.go)
 * [execforeach](examples/execforeach/main.go)
+* [execreduce](examples/execreduce/main.go)
 * [execute](examples/execute/main.go)
 * [grep](examples/grep/main.go)
 * [head](examples/head/main.go)
