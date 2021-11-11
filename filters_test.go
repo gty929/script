@@ -238,6 +238,13 @@ func TestExecReduce(t *testing.T) {
 			WantOutput:  "6\n",
 		},
 		{
+			Command:     "bash -c 'echo $(({{.First}} + {{.Second}}))'", // print the sum
+			InitVal:     "",
+			Input:       []string{"1", "-2", "3"},
+			ErrExpected: false,
+			WantOutput:  "2\n",
+		},
+		{
 			Command:     "bash -c 'echo $(({{.First}} + {{.Second}}))'", // print the sum but with init val -1
 			InitVal:     "-1",
 			Input:       []string{"1", "2", "3"},

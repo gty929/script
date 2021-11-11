@@ -627,7 +627,7 @@ The command string is interpreted as a Go template, which may include `{{.First}
 The first command that results in an error will set the pipe's error status accordingly, and no subsequent commands will be run.
 
 ```go
-// Calculate the sum of numbers
+// Add up all the numbers
 script.Stdin().ExecReduce("bash -c 'echo $(({{.First}} + {{.Second}}))'", "").Stdout()
 ```
 
