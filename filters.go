@@ -8,7 +8,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -202,7 +201,6 @@ func (p *Pipe) ExecReduce(cmdTpl string, initVal string) *Pipe {
 		}
 		cmdLine := strings.Builder{}
 		err := tpl.Execute(&cmdLine, ReduceArgs{First: output, Second: scanner.Text()})
-		log.Println(cmdLine.String())
 		if err != nil {
 			return Echo(initVal + "\n").WithError(err)
 		}
