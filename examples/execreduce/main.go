@@ -4,8 +4,8 @@ import (
 	"github.com/bitfield/script"
 )
 
-// This program prints out the line that has the most words.
+// This program prints the first address that it pings successfully.
 
 func main() {
-	script.Stdin().ExecReduce("bash -c '[[ $(echo {{.First}} | wc -w) -ge $(echo {{.Second}} | wc -w) ]] && echo {{.First}} || echo {{.Second}}'", "").Stdout()
+	script.Stdin().ExecReduce("bash -c '[[ '{{.First}}' = 'None' ]] && ping -c 4 {{.Second}} >> ping.log && echo {{.Second}} || echo {{.First}}'", "None").Stdout()
 }

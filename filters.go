@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -171,15 +172,13 @@ func (p *Pipe) ExecForEach(cmdTpl string) *Pipe {
 // ExecReduce runs the supplied "reducer" command on each line of input,
 // passing in the return value from the calculation on the preceding line.
 // The final result of running the reducer across lines is a single value.
-// The command string is interpreted as a Go template, which may include
+// The command string is interpreted as a Go template, which parses
 // {{.First}} as the previously reduced value and {{.Second}} as the current
-// line value. InitVal specifies the initial "reduced" value, and if it is an
-// empty string, the reduction will start from the first two input lines.
+// line value. By default, the reduction starts from the first two lines,
+// while the user may also specify one or more strings as initial values.
 // If any command resulted in a non-zero exit status, the function will return
-// a pipe with error status "exit status X", where X is the integer exit status,
-// and the pipe's reader contains initVal.
-// The function does NOT jump over empty lines.
-func (p *Pipe) ExecReduce(cmdTpl string, initVal string) *Pipe {
+// a pipe with error status "exit status X", where X is the integer exit status.
+func (p *Pipe) ExecReduce(cmdTpl string, initVals ...string) *Pipe {
 	type ReduceArgs struct {
 		First  string
 		Second string
@@ -191,32 +190,41 @@ func (p *Pipe) ExecReduce(cmdTpl string, initVal string) *Pipe {
 	if err != nil {
 		return p.WithError(err)
 	}
+	initValNum := len(initVals)
 	scanner := bufio.NewScanner(p.Reader)
-	output := initVal
-	for scanner.Scan() {
-		text := scanner.Text()
-		if output == "" {
-			output = text
+	var output string
+	for lineIndex := 0; lineIndex < initValNum || scanner.Scan(); lineIndex++ {
+		var line string
+		if lineIndex < initValNum {
+			line = initVals[lineIndex]
+		} else {
+			line = scanner.Text()
+		}
+		if lineIndex == 0 {
+			output = line
 			continue
 		}
 		cmdLine := strings.Builder{}
-		err := tpl.Execute(&cmdLine, ReduceArgs{First: output, Second: scanner.Text()})
+		err := tpl.Execute(&cmdLine, ReduceArgs{First: output, Second: line})
 		if err != nil {
-			return Echo(initVal + "\n").WithError(err)
+			return Echo(output + "\n").WithError(err)
 		}
 		cmdOutput, err := Exec(cmdLine.String()).String()
+		log.Println(cmdLine.String())
 		if err != nil {
-			return Echo(initVal + "\n").WithError(err)
+			log.Println(err)
+			return Echo(cmdOutput + "\n").WithError(err)
 		}
 		if strings.HasSuffix(cmdOutput, "\n") {
 			output = cmdOutput[:len(cmdOutput)-1]
 		} else {
 			output = cmdOutput
 		}
+		log.Println(lineIndex, output)
 	}
 	err = scanner.Err()
 	if err != nil {
-		return Echo(initVal + "\n").WithError(err)
+		return Echo(output + "\n").WithError(err)
 	}
 	return Echo(output + "\n")
 }

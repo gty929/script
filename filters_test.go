@@ -205,105 +205,105 @@ func TestExecReduce(t *testing.T) {
 	tcs := []struct {
 		Input       []string
 		Command     string
-		InitVal     string
+		InitVal     []string
 		ErrExpected bool
 		WantOutput  string
 	}{
 		{
 			Command:     "bash -c 'echo {{.Second}}'", // print the last
-			InitVal:     "",
+			InitVal:     []string{},
 			Input:       []string{"a", "", "de"},
 			ErrExpected: false,
 			WantOutput:  "de\n",
 		},
 		{
 			Command:     "bash -c 'echo {{.Second}}'", // print the last
-			InitVal:     "",
+			InitVal:     []string{},
 			Input:       []string{"a", "b", ""},
 			ErrExpected: false,
 			WantOutput:  "\n",
 		},
 		{
 			Command:     "bash -c 'echo {{.First}}'", // print the first
-			InitVal:     "",                          // initVal should be jumped over
+			InitVal:     []string{},                  // initVal should be jumped over
 			Input:       []string{"a"},
 			ErrExpected: false,
 			WantOutput:  "a\n",
 		},
 		{
 			Command:     "bash -c 'echo $(({{.First}} + {{.Second}}))'", // print the sum
-			InitVal:     "",
+			InitVal:     []string{},
 			Input:       []string{"1", "2", "3"},
 			ErrExpected: false,
 			WantOutput:  "6\n",
 		},
 		{
 			Command:     "bash -c 'echo $(({{.First}} + {{.Second}}))'", // print the sum
-			InitVal:     "",
-			Input:       []string{"1", "-2", "3"},
+			InitVal:     []string{"1", "-2"},
+			Input:       []string{"3", "-4", "5"},
 			ErrExpected: false,
-			WantOutput:  "2\n",
+			WantOutput:  "3\n",
 		},
 		{
 			Command:     "bash -c 'echo $(({{.First}} + {{.Second}}))'", // print the sum but with init val -1
-			InitVal:     "-1",
+			InitVal:     []string{"-1"},
 			Input:       []string{"1", "2", "3"},
 			ErrExpected: false,
 			WantOutput:  "5\n",
 		},
 		{
 			Command:     "bash -c 'echo $(({{.First}} + {{.Second}}))'", // print the sum
-			InitVal:     "0",
+			InitVal:     []string{"0"},
 			Input:       []string{},
 			ErrExpected: true, // input contains empty line
-			WantOutput:  "0\n",
+			WantOutput:  "\n",
 		},
 		{
 			Command:     "bash -c 'echo $(({{.First}} + {{.Second}}))'", // print the sum
-			InitVal:     "",
+			InitVal:     []string{},
 			Input:       []string{"1"},
 			ErrExpected: false,
 			WantOutput:  "1\n",
 		},
 		{
 			Command:     "bash -c 'echo $(({{.First}} + {{.Second}}))'", // print the sum
-			InitVal:     "",
+			InitVal:     []string{},
 			Input:       []string{""},
 			ErrExpected: false,
 			WantOutput:  "\n",
 		},
 		{
 			Command:     "bash -c 'echo $(({{.First}} + {{.Second}}))'", // print the sum
-			InitVal:     "0",
+			InitVal:     []string{"0"},
 			Input:       []string{"1", "2", "abc", "3"},
 			ErrExpected: false,
 			WantOutput:  "6\n",
 		},
 		{
 			Command:     "bash -c 'echo $(({{.First}} + {{.Second}}))'", // print the sum
-			InitVal:     "0",
+			InitVal:     []string{"0"},
 			Input:       []string{""},
 			ErrExpected: true,
-			WantOutput:  "0\n",
+			WantOutput:  "\n",
 		},
 		{
 			Command:     "bash -c '[[ $(echo {{.First}} | wc -w) -ge $(echo {{.Second}} | wc -w) ]] && echo {{.First}} || echo {{.Second}}'", // print the line that contains most words
-			InitVal:     "",
+			InitVal:     []string{},
 			Input:       []string{"ab cd", "", "e f g", "hijklmn"},
 			ErrExpected: false,
 			WantOutput:  "e f g\n",
 		},
 		{
 			Command:     "bogus {{.}}",
-			InitVal:     "",
+			InitVal:     []string{},
 			Input:       []string{"a", "b", "c"},
 			ErrExpected: true,
 			WantOutput:  "\n",
 		},
 	}
 	for _, tc := range tcs {
-		t.Run(tc.Command+" "+tc.InitVal, func(t *testing.T) {
-			p := Slice(tc.Input).ExecReduce(tc.Command, tc.InitVal)
+		t.Run(tc.Command, func(t *testing.T) {
+			p := Slice(tc.Input).ExecReduce(tc.Command, tc.InitVal...)
 			if tc.ErrExpected != (p.Error() != nil) {
 				t.Fatalf("unexpected error value: %v", p.Error())
 			}
