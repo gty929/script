@@ -7,7 +7,6 @@ import (
 	"regexp"
 	"strings"
 	"testing"
-	"time"
 )
 
 func TestBasename(t *testing.T) {
@@ -542,60 +541,5 @@ func TestSHA256Sums(t *testing.T) {
 		if got != tc.want {
 			t.Errorf("%q: want %q, got %q", tc.testFileName, tc.want, got)
 		}
-	}
-}
-
-func TestStreamFilter(t *testing.T) {
-	t.Parallel()
-	n := 0
-	round := 5
-	plusOneAndDoubleLine := func(s string, b *strings.Builder) {
-		time.Sleep(10 * time.Millisecond)
-		n++
-		b.WriteRune('\n')
-		b.WriteRune('\n')
-	}
-	timesTwo := func(s string, b *strings.Builder) {
-		n *= 2
-		b.WriteRune('\n')
-	}
-	Slice(make([]string, round)).Stream().EachLine(plusOneAndDoubleLine).EachLine(timesTwo).Wait()
-	want := 0
-	for i := 0; i < round; i++ {
-		want++
-		want *= 4
-	}
-	if n != want {
-		t.Errorf("want n = %d, got %d", want, n)
-	}
-}
-
-func TestSynchronize(t *testing.T) {
-	t.Parallel()
-	n := 0
-	round := 5
-	plusOne := func(s string, b *strings.Builder) {
-		time.Sleep(10 * time.Millisecond)
-		n++
-		b.WriteRune('\n')
-	}
-	timesTwo := func(s string, b *strings.Builder) {
-		n *= 2
-		b.WriteRune('\n')
-	}
-	p := Slice(make([]string, round)).Stream().EachLine(plusOne).EachLine(timesTwo).Synchronize().EachLine(timesTwo)
-	if p.err != nil {
-		t.Errorf("unexpected error value: %v", p.err)
-	}
-	want := 0
-	for i := 0; i < round; i++ {
-		want++
-		want *= 2
-	}
-	for i := 0; i < round; i++ {
-		want *= 2
-	}
-	if n != want {
-		t.Errorf("want n = %d, got %d", want, n)
 	}
 }

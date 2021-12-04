@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 )
 
 // Some tests require monkeying with stdout. Make this concurrency-safe.
@@ -83,6 +84,89 @@ func TestExitStatus(t *testing.T) {
 	}
 }
 
+func TestStream(t *testing.T) {
+	t.Parallel()
+	n := 0
+	round := 5
+	plusOneAndDoubleLine := func(s string, b *strings.Builder) {
+		time.Sleep(10 * time.Millisecond)
+		n++
+		b.WriteRune('\n')
+		b.WriteRune('\n')
+	}
+	timesTwo := func(s string, b *strings.Builder) {
+		n *= 2
+		b.WriteRune('\n')
+	}
+	err := Stream().Exec("bash -c 'yes 1 | head -n 5; wait'").EachLine(plusOneAndDoubleLine).EachLine(timesTwo).Wait()
+	if err != nil {
+		t.Errorf("Got unexpected error %q", err)
+	}
+	want := 0
+	for i := 0; i < round; i++ {
+		want++
+		want *= 4
+	}
+	if n != want {
+		t.Errorf("want n = %d, got %d", want, n)
+	}
+}
+
+func TestStreamFilter(t *testing.T) {
+	t.Parallel()
+	n := 0
+	round := 5
+	plusOneAndDoubleLine := func(s string, b *strings.Builder) {
+		time.Sleep(10 * time.Millisecond)
+		n++
+		b.WriteRune('\n')
+		b.WriteRune('\n')
+	}
+	timesTwo := func(s string, b *strings.Builder) {
+		n *= 2
+		b.WriteRune('\n')
+	}
+	Slice(make([]string, round)).Stream().EachLine(plusOneAndDoubleLine).EachLine(timesTwo).Wait()
+	want := 0
+	for i := 0; i < round; i++ {
+		want++
+		want *= 4
+	}
+	if n != want {
+		t.Errorf("want n = %d, got %d", want, n)
+	}
+}
+
+func TestSynchronize(t *testing.T) {
+	t.Parallel()
+	n := 0
+	round := 5
+	plusOne := func(s string, b *strings.Builder) {
+		time.Sleep(10 * time.Millisecond)
+		n++
+		b.WriteRune('\n')
+	}
+	timesTwo := func(s string, b *strings.Builder) {
+		n *= 2
+		b.WriteRune('\n')
+	}
+	p := Slice(make([]string, round)).Stream().EachLine(plusOne).EachLine(timesTwo).Synchronize().EachLine(timesTwo)
+	if p.err != nil {
+		t.Errorf("unexpected error value: %v", p.err)
+	}
+	want := 0
+	for i := 0; i < round; i++ {
+		want++
+		want *= 2
+	}
+	for i := 0; i < round; i++ {
+		want *= 2
+	}
+	if n != want {
+		t.Errorf("want n = %d, got %d", want, n)
+	}
+}
+
 // doMethodsOnPipe calls every kind of method on the supplied pipe and
 // tries to trigger a panic.
 func doMethodsOnPipe(t *testing.T, p *Pipe, kind string) {
@@ -115,6 +199,8 @@ func doMethodsOnPipe(t *testing.T, p *Pipe, kind string) {
 	p.Error()
 	action = "Exec()"
 	p.Exec("bogus")
+	action = "ExecForEach()"
+	p.ExecForEach("bogus")
 	action = "ExitStatus()"
 	p.ExitStatus()
 	action = "First()"
