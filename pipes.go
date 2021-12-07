@@ -5,6 +5,7 @@ import (
 	"io"
 	"regexp"
 	"strconv"
+	"sync"
 )
 
 // Pipe represents a pipe object with an associated ReadAutoCloser.
@@ -12,11 +13,12 @@ type Pipe struct {
 	Reader ReadAutoCloser
 	err    error
 	async  bool
+	mu     sync.RWMutex
 }
 
 // NewPipe returns a pointer to a new empty pipe, with streaming turned off.
 func NewPipe() *Pipe {
-	return &Pipe{ReadAutoCloser{}, nil, false}
+	return &Pipe{ReadAutoCloser{}, nil, false, sync.RWMutex{}}
 }
 
 // Close closes the pipe's associated reader. This is always safe to do, because
@@ -34,6 +36,8 @@ func (p *Pipe) Error() error {
 	if p == nil {
 		return nil
 	}
+	p.mu.RLock()
+	defer p.mu.RUnlock()
 	return p.err
 }
 
@@ -72,7 +76,9 @@ func (p *Pipe) Read(b []byte) (int, error) {
 // SetError sets the pipe's error status to the specified error.
 func (p *Pipe) SetError(err error) {
 	if p != nil {
+		p.mu.Lock()
 		p.err = err
+		p.mu.Unlock()
 	}
 }
 

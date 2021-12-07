@@ -86,16 +86,21 @@ func TestExitStatus(t *testing.T) {
 
 func TestStream(t *testing.T) {
 	t.Parallel()
+	var mu sync.Mutex
 	n := 0
 	round := 5
 	plusOneAndDoubleLine := func(s string, b *strings.Builder) {
 		time.Sleep(10 * time.Millisecond)
+		mu.Lock()
 		n++
+		mu.Unlock()
 		b.WriteRune('\n')
 		b.WriteRune('\n')
 	}
 	timesTwo := func(s string, b *strings.Builder) {
+		mu.Lock()
 		n *= 2
+		mu.Unlock()
 		b.WriteRune('\n')
 	}
 	err := Stream().Exec("bash -c 'yes 1 | head -n 5; wait'").EachLine(plusOneAndDoubleLine).EachLine(timesTwo).Wait()
@@ -114,16 +119,21 @@ func TestStream(t *testing.T) {
 
 func TestStreamFilter(t *testing.T) {
 	t.Parallel()
+	var mu sync.Mutex
 	n := 0
 	round := 5
 	plusOneAndDoubleLine := func(s string, b *strings.Builder) {
 		time.Sleep(10 * time.Millisecond)
+		mu.Lock()
 		n++
+		mu.Unlock()
 		b.WriteRune('\n')
 		b.WriteRune('\n')
 	}
 	timesTwo := func(s string, b *strings.Builder) {
+		mu.Lock()
 		n *= 2
+		mu.Unlock()
 		b.WriteRune('\n')
 	}
 	Slice(make([]string, round)).Stream().EachLine(plusOneAndDoubleLine).EachLine(timesTwo).Wait()
@@ -139,15 +149,20 @@ func TestStreamFilter(t *testing.T) {
 
 func TestSynchronize(t *testing.T) {
 	t.Parallel()
+	var mu sync.Mutex
 	n := 0
 	round := 5
 	plusOne := func(s string, b *strings.Builder) {
 		time.Sleep(10 * time.Millisecond)
+		mu.Lock()
 		n++
+		mu.Unlock()
 		b.WriteRune('\n')
 	}
 	timesTwo := func(s string, b *strings.Builder) {
+		mu.Lock()
 		n *= 2
+		mu.Unlock()
 		b.WriteRune('\n')
 	}
 	p := Slice(make([]string, round)).Stream().EachLine(plusOne).EachLine(timesTwo).Synchronize().EachLine(timesTwo)
